@@ -1,0 +1,3 @@
+[submodule "components/mealie/charts/mealie-chart"]
+	path = components/mealie/charts/mealie-chart
+	url = git@gitlab.com:mmuenker/mealie-chart.git
