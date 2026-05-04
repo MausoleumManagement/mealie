@@ -111,6 +111,92 @@ spec:
         persistentVolumeClaim:
           claimName: mealie-data
 ---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mealie-backup
+  namespace: mealie
+spec:
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - command:
+            - /bin/sh
+            - -c
+            - |
+              restic snapshots &>/dev/null || restic init
+              restic backup /data
+              restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --prune
+            env:
+            - name: RESTIC_REPOSITORY
+              value: s3:http://garage.irminsul:3900/mealie-backups/restic
+            - name: AWS_DEFAULT_REGION
+              valueFrom:
+                secretKeyRef:
+                  key: aws-region
+                  name: s3-backup-restic
+            - name: RESTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: restic-password
+                  name: s3-backup-restic
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: aws-access-key-id
+                  name: s3-backup-restic
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: aws-secret-access-key
+                  name: s3-backup-restic
+            image: restic/restic:latest
+            name: restic
+            volumeMounts:
+            - mountPath: /data
+              name: data
+              readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: mealie-data
+  schedule: 0 2 * * *
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: s3-backup-restic
+  namespace: mealie
+spec:
+  data:
+  - remoteRef:
+      key: kv/nekropolis/mealie/s3-backup-restic
+      property: restic-password
+    secretKey: restic-password
+  - remoteRef:
+      key: kv/nekropolis/mealie/s3-backup-restic
+      property: aws-access-key-id
+    secretKey: aws-access-key-id
+  - remoteRef:
+      key: kv/nekropolis/mealie/s3-backup-restic
+      property: aws-secret-access-key
+    secretKey: aws-secret-access-key
+  - remoteRef:
+      key: kv/nekropolis/mealie/s3-backup-restic
+      property: region
+    secretKey: aws-region
+  refreshInterval: 1h0m0s
+  refreshPolicy: Periodic
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao-backend
+  target:
+    name: s3-backup-credentials
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
