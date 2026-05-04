@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mealie
+---
+apiVersion: v1
+automountServiceAccountToken: true
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: mealie
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mealie
+    app.kubernetes.io/version: v3.16.0
+    helm.sh/chart: mealie-0.0.1-nightly.50
+  name: mealie
+  namespace: mealie
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: mealie
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mealie
+    app.kubernetes.io/version: v3.16.0
+    helm.sh/chart: mealie-0.0.1-nightly.50
+  name: mealie
+  namespace: mealie
+spec:
+  ports:
+  - name: http
+    port: 9000
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/instance: mealie
+    app.kubernetes.io/name: mealie
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mealie-data
+  namespace: mealie
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: cephfs-2026
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: mealie
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mealie
+    app.kubernetes.io/version: v3.16.0
+    helm.sh/chart: mealie-0.0.1-nightly.50
+  name: mealie
+  namespace: mealie
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mealie
+      app.kubernetes.io/name: mealie
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: mealie
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: mealie
+        app.kubernetes.io/version: v3.16.0
+        helm.sh/chart: mealie-0.0.1-nightly.50
+    spec:
+      containers:
+      - env: null
+        image: ghcr.io/mealie-recipes/mealie:v3.16.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+        name: mealie
+        ports:
+        - containerPort: 9000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext: {}
+        volumeMounts:
+        - mountPath: /app/data
+          name: data
+      securityContext: {}
+      serviceAccountName: mealie
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: mealie-data
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: local-ca-issuer
+    kube-vip.io/loadbalancerIPs: 192.168.13.12
+  name: mealie
+  namespace: mealie
+spec:
+  ingressClassName: cilium
+  rules:
+  - host: mealie.nekropolis.irminsul
+    http:
+      paths:
+      - backend:
+          service:
+            name: mealie
+            port:
+              number: 9000
+        path: /
+        pathType: Prefix
+  - host: mealie.irminsul
+    http:
+      paths:
+      - backend:
+          service:
+            name: mealie
+            port:
+              number: 9000
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - mealie.irminsul
+    - mealie.nekropolis.irminsul
+    secretName: mealie-certificate

@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mealie
+
+resources:
+  - namespace.yaml
+  - ingress.yaml
+  - pvc.yaml
+
+
+# https://gitlab.com/mmuenker/mealie-chart
+helmCharts:
+  - name: mealie-chart
+    version: "0.0.1-nightly.50"
+    releaseName: mealie
+    namespace: mealie
+    valuesFile: values.yaml
+
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: mealie-test-connection
+    target:
+      kind: Pod
+      name: mealie-test-connection
