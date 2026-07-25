@@ -14,7 +14,6 @@ metadata:
     app.kubernetes.io/version: v3.16.0
     helm.sh/chart: mealie-0.0.1-nightly.50
   name: mealie
-  namespace: mealie
 ---
 apiVersion: v1
 kind: Service
@@ -26,7 +25,6 @@ metadata:
     app.kubernetes.io/version: v3.16.0
     helm.sh/chart: mealie-0.0.1-nightly.50
   name: mealie
-  namespace: mealie
 spec:
   ports:
   - name: http
@@ -61,7 +59,6 @@ metadata:
     app.kubernetes.io/version: v3.16.0
     helm.sh/chart: mealie-0.0.1-nightly.50
   name: mealie
-  namespace: mealie
 spec:
   replicas: 1
   selector:
@@ -187,7 +184,7 @@ spec:
     secretKey: aws-secret-access-key
   - remoteRef:
       key: kv/nekropolis/mealie/s3-backup-restic
-      property: region
+      property: aws-region
     secretKey: aws-region
   refreshInterval: 1h0m0s
   refreshPolicy: Periodic
