@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/mealie-recipes/mealie
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "@sha256:78eb28b8776d0bad40c5e605c72b3f4f5976793e491558c7dcbdfc04c835d4bc"
 
 service:
   type: ClusterIP
